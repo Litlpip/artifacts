@@ -7,4 +7,4 @@ const artifactsApi = ArtifactsApi.create({
     token,
 });
 
-export default artifactsApi;
+// export default artifactsApi;

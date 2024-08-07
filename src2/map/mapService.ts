@@ -46,13 +46,13 @@ export class MapService {
         return new MapService(list);
     }
 
-    public get(code: MapCode): ArtifactMap {
+    public get(code: MapCode): ArtifactMap[] {
         console.log('code', code);
-        return this.cache.get(code)[0];
+        return this.cache.get(code);
     }
 }
 
-class ArtifactMap {
+export class ArtifactMap {
     constructor({content, x, y, name, skin}: ArtifactsMapData) {
         this.type = content.type;
         this.code = content.code;

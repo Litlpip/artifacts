@@ -1,6 +1,7 @@
-import {ArtifactsApi, ArtifactsError, GetCharacterApiResult} from 'artifacts-api-client';
+import {ArtifactsApi, GetCharacterApiResult} from 'artifacts-api-client';
 import {delay} from '../../src/utils';
 import {CharacterName} from '../types';
+import {ArtifactMap} from '../map/mapService';
 
 export class Character {
     constructor(
@@ -11,6 +12,13 @@ export class Character {
         this.name = name;
         this.x = characterInfo.x;
         this.y = characterInfo.y;
+        this.cooldownExpiration = new Date(characterInfo.cooldown_expiration);
+    }
+
+    private cooldownExpiration = new Date();
+
+    get characterInfo() {
+        return this.characterInfo;
     }
 
     x = 0;
@@ -21,30 +29,42 @@ export class Character {
         return new Character(name, artifactsApi, data);
     }
 
-    public cooldownExpiration = new Date();
-
-    public async moveAction(x: number, y: number): Promise<void> {
+    public async move(map: ArtifactMap | ArtifactMap[]): Promise<void> {
         await this.waitCooldown();
-        await this.artifactsApi.myCharacters.move(this.name, {x, y});
+
+        let destination: ArtifactMap;
+        if (Array.isArray(map)) destination = map[0];
+        else destination = map;
+
+        await this.artifactsApi.myCharacters.move(this.name, {x: destination.x, y: destination.y});
         await this.refresh();
     }
 
-    public async gatherAction(): Promise<void> {
+    public async gather(needDeposit): Promise<void> {
         await this.waitCooldown();
         try {
             await this.artifactsApi.myCharacters.gathering(this.name);
         } catch (err) {
-            if (err.code === 497) {
+            if (err.code === 497 && needDeposit) {
                 console.log('err.code', err.code, err);
-                this.moveAction(0, 0);
+                await this.depositAll();
             }
+            console.log('Gather error', err?.message);
         }
         await this.refresh();
     }
 
-    public async fightAction(): Promise<void> {
+    public async fight(needDeposit): Promise<void> {
         await this.waitCooldown();
-        await this.artifactsApi.myCharacters.fight(this.name);
+        try {
+            await this.artifactsApi.myCharacters.fight(this.name);
+        } catch (err) {
+            if (err.code === 497 && needDeposit) {
+                console.log('err.code', err.code, err);
+                await this.depositAll();
+            }
+            console.log('Fight error', err?.message);
+        }
         await this.refresh();
     }
 
@@ -56,8 +76,12 @@ export class Character {
 
     public async depositAll(): Promise<void> {
         await this.waitCooldown();
-        for (const item of this.characterInfo.inventory.filter((item) => item.quantity)) {
-            await this.depositItem(item.code, item.quantity);
+
+        const inventory = this.characterInfo.inventory.filter((item) => item.quantity);
+        if (inventory.length) {
+            for (const item of this.characterInfo.inventory.filter((item) => item.quantity)) {
+                await this.depositItem(item.code, item.quantity);
+            }
         }
         await this.refresh();
     }
@@ -72,6 +96,25 @@ export class Character {
 
     private async waitCooldown(): Promise<void> {
         const nowDate = new Date();
+        console.log('this.cooldownExpiration - nowDate', this.cooldownExpiration - nowDate);
         if (this.cooldownExpiration - nowDate > 0) await delay(this.cooldownExpiration - nowDate);
+    }
+
+    async withdraw(code: string, quantity: number): Promise<void> {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.withdrawBank(this.name, {quantity, code});
+        await this.refresh();
+    }
+
+    async recycle(code: string, quantity: number): Promise<void> {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.recycling(this.name, {quantity, code});
+        await this.refresh();
+    }
+
+    async craft(code: string, quantity: number): Promise<void> {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.crafting(this.name, {quantity, code});
+        await this.refresh();
     }
 }
