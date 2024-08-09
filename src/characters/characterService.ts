@@ -1,6 +1,7 @@
 import {Character} from './characters';
 import {artifactsApi} from '../consts';
 import {CharacterName} from '../types';
+import {MapService} from '../map/mapService';
 
 export class CharacterService {
     private cache = new Map<CharacterName, Character>();
@@ -9,10 +10,10 @@ export class CharacterService {
         list.forEach((item) => this.cache.set(item.name, item));
     }
 
-    static async create(list: CharacterName[]) {
+    static async create(list: CharacterName[], mapService: MapService) {
         const charList: Character[] = [];
         for (const item of list) {
-            const char = await Character.create(item, artifactsApi);
+            const char = await Character.create(item, artifactsApi, mapService);
             charList.push(char);
         }
         return new CharacterService(charList);
@@ -26,7 +27,7 @@ export class CharacterService {
         return list;
     }
 
-    public get(name: CharacterName) {
+    public get(name: CharacterName): Character {
         return this.cache.get(name);
     }
 }

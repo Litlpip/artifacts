@@ -1,13 +1,15 @@
 import {ArtifactsApi, GetCharacterApiResult} from 'artifacts-api-client';
-import {delay} from '../../src/utils';
+import {delay} from '../utils';
 import {CharacterName} from '../types';
-import {ArtifactMap} from '../map/mapService';
+import {ArtifactMap, MapService} from '../map/mapService';
+import {ItemSlot} from '../plan/types';
 
 export class Character {
     constructor(
         readonly name: CharacterName,
         private readonly artifactsApi: ArtifactsApi,
         private characterInfo: GetCharacterApiResult['data'],
+        private readonly mapService: MapService,
     ) {
         this.name = name;
         this.x = characterInfo.x;
@@ -15,18 +17,17 @@ export class Character {
         this.cooldownExpiration = new Date(characterInfo.cooldown_expiration);
     }
 
-    private cooldownExpiration = new Date();
+    private cooldownExpiration;
+    x;
+    y;
 
     get characterInfo() {
         return this.characterInfo;
     }
 
-    x = 0;
-    y = 0;
-
-    static async create(name: CharacterName, artifactsApi: ArtifactsApi) {
+    static async create(name: CharacterName, artifactsApi: ArtifactsApi, mapService: MapService) {
         const {data} = await artifactsApi.characters.get(name);
-        return new Character(name, artifactsApi, data);
+        return new Character(name, artifactsApi, data, mapService);
     }
 
     public async move(map: ArtifactMap | ArtifactMap[]): Promise<void> {
@@ -47,6 +48,7 @@ export class Character {
         } catch (err) {
             if (err.code === 497 && needDeposit) {
                 console.log('err.code', err.code, err);
+                await this.move(this.mapService.get('bank'));
                 await this.depositAll();
             }
             console.log('Gather error', err?.message);
@@ -75,15 +77,12 @@ export class Character {
     }
 
     public async depositAll(): Promise<void> {
-        await this.waitCooldown();
-
         const inventory = this.characterInfo.inventory.filter((item) => item.quantity);
         if (inventory.length) {
             for (const item of this.characterInfo.inventory.filter((item) => item.quantity)) {
                 await this.depositItem(item.code, item.quantity);
             }
         }
-        await this.refresh();
     }
 
     public async refresh(): Promise<void> {
@@ -96,13 +95,19 @@ export class Character {
 
     private async waitCooldown(): Promise<void> {
         const nowDate = new Date();
+        console.log('nowDate.getDate()', nowDate);
+        console.log('this.cooldownExpiration.getDate()', this.cooldownExpiration);
         console.log('this.cooldownExpiration - nowDate', this.cooldownExpiration - nowDate);
         if (this.cooldownExpiration - nowDate > 0) await delay(this.cooldownExpiration - nowDate);
     }
 
     async withdraw(code: string, quantity: number): Promise<void> {
         await this.waitCooldown();
-        await this.artifactsApi.myCharacters.withdrawBank(this.name, {quantity, code});
+        try {
+            await this.artifactsApi.myCharacters.withdrawBank(this.name, {quantity, code});
+        } catch (err) {
+            console.log('Withdraw error', err);
+        }
         await this.refresh();
     }
 
@@ -115,6 +120,18 @@ export class Character {
     async craft(code: string, quantity: number): Promise<void> {
         await this.waitCooldown();
         await this.artifactsApi.myCharacters.crafting(this.name, {quantity, code});
+        await this.refresh();
+    }
+
+    async equip(code: string, slot: ItemSlot) {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.equipItem(this.name, {code, slot});
+        await this.refresh();
+    }
+
+    async unequip(slot: ItemSlot) {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.unequipItem(this.name, {slot});
         await this.refresh();
     }
 }

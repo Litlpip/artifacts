@@ -1,10 +1,8 @@
-import {GetAllMapsApiResult} from 'artifacts-api-client';
 import {artifactsApi} from '../consts';
 import {ArtifactsMapData, MapCode} from '../types';
 
 export class MapService {
-    constructor(list: GetAllMapsApiResult['data']) {
-        console.log('this.cache', this.cache);
+    constructor(list: ArtifactsMapData[]) {
         list.forEach((item) => {
             const code = item.content.code as MapCode;
             const instance = new ArtifactMap(item);
@@ -33,7 +31,6 @@ export class MapService {
                         page: i,
                     });
 
-                    console.log('data', data);
                     data.filter((item) => item.content).forEach((item) => list.push(item));
                 }
             }
@@ -41,13 +38,10 @@ export class MapService {
             console.log('err', err);
         }
 
-        console.log('list', list.length);
-
         return new MapService(list);
     }
 
     public get(code: MapCode): ArtifactMap[] {
-        console.log('code', code);
         return this.cache.get(code);
     }
 }

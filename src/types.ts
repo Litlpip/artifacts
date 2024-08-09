@@ -1,10 +1,25 @@
-import {GetAllMapsApiResult} from 'artifacts-api-client';
+import {GetMapApiResult} from 'artifacts-api-client';
 
 export type CharacterName = 'Litlpip' | 'man1' | 'man2' | 'man3' | 'man4';
 
 export type MapContentType = 'resource' | 'monster' | 'workshop' | 'bank' | 'grand_exchange' | 'tasks_master';
 
-export type ArtifactsMapData = GetAllMapsApiResult['data'][0];
+export type ArtifactsMapData = GetMapApiResult['data'];
+type B = NonNullableFields<ArtifactsMapData['content']>;
+
+export type NonNullableFields<T> = {
+    [P in keyof T]: NonNullable<T[P]>;
+};
+
+const a: B = {
+    content: null,
+    x: 1,
+    y: 2,
+    name: '123',
+    skin: '123',
+};
+
+console.log(a);
 
 //Manually picked
 export type MapCode = ResourceCode | MonsterCode | WorkshopCode | CodeBank | GrandExchangeCode | TaskMasterCode;
