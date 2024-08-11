@@ -1,5 +1,6 @@
 import {Character} from '../characters/characters';
 import {Action, Plan} from './types';
+import {delay} from '../utils';
 
 export class PlanLauncher {
     constructor() {}
@@ -58,10 +59,27 @@ export class PlanLauncher {
         }
     }
 
-    public async runPlanForEachChar(charList: Character[], planCrafter, isLooped: boolean = false) {
+    public async runPlanForEachChar<PlanContext>(
+        charList: Character[],
+        planCrafter: (...args: PlanContext) => Promise<Plan[]>,
+        planContext: PlanContext,
+        isLooped: boolean = false,
+    ) {
         for (const char of charList) {
-            const plan = await planCrafter(char);
+            const plan = await planCrafter(...planContext);
             console.log('plan', plan);
+            this.runPlan(char, plan, isLooped);
+        }
+    }
+
+    public async runPlanForEachCharWithChar<PlanContext>(
+        charList: Character[],
+        planCrafter: (char: Character, ...args: PlanContext) => Promise<Plan[]>,
+        planContext: PlanContext,
+        isLooped: boolean = false,
+    ) {
+        for (const char of charList) {
+            const plan = await planCrafter(char, ...planContext);
             this.runPlan(char, plan, isLooped);
         }
     }

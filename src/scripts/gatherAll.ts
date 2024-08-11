@@ -11,16 +11,17 @@ async function main() {
     const planCrafter = new PlanCrafter(mapService);
     const planLauncher = new PlanLauncher();
 
-    const person = charactersServise.get('man3');
-    const plan1 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan2 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan3 = await planCrafter.createSimpleCraftPlan(person, 'iron_boots', 'gearcrafting', false, 5);
-    // const plan4 = await planCrafter.createSimpleCraftPlan(person, 'iron_ring', 'jewelrycrafting', false, 5);
+    // const gather = () => planCrafter.createGatherPlan('spruce_tree');
 
-    await planLauncher.runPlan(person, plan1);
-    // await planLauncher.runPlan(person, plan2, false);
-    // await planLauncher.runPlan(person, plan3, false);
-    // await planLauncher.runPlan(person, plan4, false);
+    planLauncher.runPlanForEachChar(
+        charactersServise.list(['Litlpip', 'man2', 'man1', 'man4']),
+        planCrafter.createGatherPlan,
+        ['spruce_tree'],
+        true,
+    );
+
+    // const fight = (code: MapCode) => planCrafter.createFightPlan(code);
+    // planLauncher.runPlanForEachChar(charactersServise.list(), () => fight('wolf'), true);
 }
 
 if (cluster.isMaster) {

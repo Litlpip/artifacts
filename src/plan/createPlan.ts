@@ -16,19 +16,20 @@ import {
 import {MapCode} from '../types';
 import {artifactsApi} from '../consts';
 import {Character} from '../characters/characters';
+import {GetItemApiResult} from 'artifacts-api-client/dist/api/types/api-schema-bindings.types';
 
 export class PlanCrafter {
     //Ни в коем случае
     constructor(private readonly mapService: MapService) {}
 
     // Крафт без вложенных крафтов
-    public async createSimpleCraftPlan(
+    public createSimpleCraftPlan = async (
         character: Character,
         code: string,
         mapCode: MapCode,
         needRecycle: boolean = false,
         quantity: number = undefined,
-    ): Promise<Plan[]> {
+    ): Promise<Plan[]> => {
         //сложить
         const plan: Plan[] = [this.getDepositAllPlan()];
         // const bank = this.mapService.get('bank');
@@ -50,12 +51,13 @@ export class PlanCrafter {
         //взять сколько надо ресок
 
         plan.push(this.getDepositAllPlan());
+        console.log(plan);
 
         return plan;
-    }
+    };
 
     // Возвращает план как сменить вещи
-    public async createEquipPlan(itemsCode: string[], character: Character) {
+    public createEquipPlan = async (character: Character, itemsCode: string[]) => {
         // Надо что то придумать с кольцами
         // Складываем все на всякий случай
         const plan: Plan[] = [this.getDepositAllPlan()];
@@ -69,10 +71,7 @@ export class PlanCrafter {
 
         // Посмотреть что за итем
         for (const item of newItemsToEquip) {
-            const {data} = await artifactsApi.items.get(item.code);
-
-            if (character.characterInfo[`${item.itemType}_slot`])
-                plan.push(this.getUnequipPlan(data.item.type as ItemSlot));
+            if (character.characterInfo[`${item.itemType}_slot`]) plan.push(this.getUnequipPlan(item.itemType));
         }
 
         for (const item of newItemsToEquip) {
@@ -86,19 +85,19 @@ export class PlanCrafter {
         console.log(plan);
 
         return plan;
-    }
+    };
 
-    public async createGatherPlan(mapCode: MapCode) {
+    public createGatherPlan = async (mapCode: MapCode): Promise<PlanGather[]> => {
         return [this.getGatherPlan(mapCode)];
-    }
+    };
 
-    public async createFightPlan(mapCode: MapCode) {
+    public createFightPlan = async (mapCode: MapCode): Promise<PlanFight[]> => {
         return [this.getFightPlan(mapCode)];
-    }
+    };
 
-    public async createDepositAllPlan() {
+    public createDepositAllPlan = async (): Promise<PlanDepositAll[]> => {
         return [this.getDepositAllPlan()];
-    }
+    };
 
     private getDepositAllPlan(): PlanDepositAll {
         const bank = this.mapService.get('bank');
@@ -173,12 +172,91 @@ export class PlanCrafter {
         }>
     > {
         const result: {code: string; itemType: ItemSlot}[] = [];
+
         for (const code of codeList) {
             const {data} = await artifactsApi.items.get(code);
-            if (character.characterInfo[`${data.item.type}_slot`] !== code) {
-                result.push({code, itemType: data.item.type as ItemSlot});
+
+            let itemType = data.item.type;
+
+            // Кейс для колец, потребляемого и артифактов
+            if (numerableItemSlots.includes(itemType)) {
+                itemType = await this.getItemSlotForNumerableSlots(itemType as NumerableSlotType, character, data.item);
+                // if (character.characterInfo[`${data.item.type}_slot`] !== code) result.push({code, itemType: type});
+                // continue;
+            }
+
+            //Кейс для остальных итемов
+            if (character.characterInfo[`${itemType}_slot`] !== code) {
+                result.push({code, itemType: itemType as ItemSlot});
             }
         }
         return result;
     }
+
+    private async getItemSlotForNumerableSlots(
+        type: NumerableSlotType,
+        character: Character,
+        data: GetItemApiResult['data']['item'],
+    ): Promise<ItemSlot> {
+        const info = character.characterInfo;
+        switch (type) {
+            case 'artifact':
+                if (!info.artifact1_slot) return 'artifact1';
+                if (!info.artifact2_slot) return 'artifact2';
+                if (!info.artifact1_slot) return 'artifact3';
+                return await this.returnLowestLevelTypeOrDefault(
+                    Promise.all([
+                        artifactsApi.items.get(info.artifact1_slot),
+                        artifactsApi.items.get(info.artifact2_slot),
+                        artifactsApi.items.get(info.artifact3_slot),
+                    ]),
+                    'artifact',
+                    'artifact1',
+                    data,
+                );
+            case 'ring':
+                if (!info.ring1_slot) return 'ring1';
+                if (!info.ring2_slot) return 'ring2';
+                return await this.returnLowestLevelTypeOrDefault(
+                    Promise.all([artifactsApi.items.get(info.ring1_slot), artifactsApi.items.get(info.ring2_slot)]),
+                    'ring',
+                    'ring1',
+                    data,
+                );
+
+                break;
+            case 'consumable':
+                if (!info.consumable1_slot) return 'consumable1';
+                if (!info.consumable2_slot) return 'consumable2';
+                return await this.returnLowestLevelTypeOrDefault(
+                    Promise.all([
+                        artifactsApi.items.get(info.consumable1_slot),
+                        artifactsApi.items.get(info.consumable2_slot),
+                    ]),
+                    'consumable',
+                    'consumable1',
+                    data,
+                );
+        }
+    }
+
+    private async returnLowestLevelTypeOrDefault(
+        promise: Promise<GetItemApiResult[]>,
+        type: NumerableSlotType,
+        defaultValue: ItemSlot,
+        data: GetItemApiResult['data']['item'],
+    ): Promise<ItemSlot> {
+        const items = await promise;
+        const mappedItems = items.map((item, index) => ({slot: `${type}${index + 1}`, item: item.data.item}));
+        mappedItems.sort((a, b) => a.item.level - b.item.level);
+        //Пытаемся заменить слот с наименьшим уровнем
+        if (data.level > mappedItems[0].item.level) {
+            return mappedItems[0].slot as ItemSlot;
+        }
+        return defaultValue;
+    }
 }
+
+type NumerableSlotType = 'ring' | 'artifact' | 'consumable';
+
+const numerableItemSlots = ['ring', 'artifact', 'consumable'];

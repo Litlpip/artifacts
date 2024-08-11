@@ -3,6 +3,7 @@ import {delay} from '../utils';
 import {CharacterName} from '../types';
 import {ArtifactMap, MapService} from '../map/mapService';
 import {ItemSlot} from '../plan/types';
+import {ArtifactsError} from 'artifacts-api-client/dist/errors/artifacts.error';
 
 export class Character {
     constructor(
@@ -37,7 +38,9 @@ export class Character {
         if (Array.isArray(map)) destination = map[0];
         else destination = map;
 
-        await this.artifactsApi.myCharacters.move(this.name, {x: destination.x, y: destination.y});
+        if (destination.x !== this.characterInfo.x || destination.y !== this.characterInfo.y) {
+            await this.artifactsApi.myCharacters.move(this.name, {x: destination.x, y: destination.y});
+        }
         await this.refresh();
     }
 
@@ -63,20 +66,38 @@ export class Character {
         } catch (err) {
             if (err.code === 497 && needDeposit) {
                 console.log('err.code', err.code, err);
+
                 await this.depositAll();
             }
             console.log('Fight error', err?.message);
         }
         await this.refresh();
+        if (this.characterInfo.task_progress === this.characterInfo.task_total) {
+            const taskMaster = this.mapService.get('monsters');
+            await this.move(taskMaster);
+            await this.completeQuest();
+            await this.takeQuest();
+        }
     }
 
     public async depositItem(code: string, quantity: number): Promise<void> {
         await this.waitCooldown();
-        await this.artifactsApi.myCharacters.depositBank(this.name, {code, quantity});
+        try {
+            await this.artifactsApi.myCharacters.depositBank(this.name, {code, quantity});
+        } catch (err) {
+            if (err instanceof ArtifactsError && err.code === 461) {
+                console.log('Transaction with this item during deposit is in progress');
+                await delay(500);
+                await this.depositItem(code, quantity);
+            }
+            console.log('Deposit error', err);
+        }
         await this.refresh();
     }
 
     public async depositAll(): Promise<void> {
+        const bank = this.mapService.get('bank');
+        await this.move(bank);
         const inventory = this.characterInfo.inventory.filter((item) => item.quantity);
         if (inventory.length) {
             for (const item of this.characterInfo.inventory.filter((item) => item.quantity)) {
@@ -95,9 +116,6 @@ export class Character {
 
     private async waitCooldown(): Promise<void> {
         const nowDate = new Date();
-        console.log('nowDate.getDate()', nowDate);
-        console.log('this.cooldownExpiration.getDate()', this.cooldownExpiration);
-        console.log('this.cooldownExpiration - nowDate', this.cooldownExpiration - nowDate);
         if (this.cooldownExpiration - nowDate > 0) await delay(this.cooldownExpiration - nowDate);
     }
 
@@ -106,6 +124,11 @@ export class Character {
         try {
             await this.artifactsApi.myCharacters.withdrawBank(this.name, {quantity, code});
         } catch (err) {
+            if (err instanceof ArtifactsError && err.code === 461) {
+                console.log('Transaction with this item during withdraw is in progress');
+                await delay(500);
+                await this.withdraw(code, quantity);
+            }
             console.log('Withdraw error', err);
         }
         await this.refresh();
@@ -132,6 +155,18 @@ export class Character {
     async unequip(slot: ItemSlot) {
         await this.waitCooldown();
         await this.artifactsApi.myCharacters.unequipItem(this.name, {slot});
+        await this.refresh();
+    }
+
+    async completeQuest() {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.completeTask(this.name);
+        await this.refresh();
+    }
+
+    async takeQuest() {
+        await this.waitCooldown();
+        await this.artifactsApi.myCharacters.acceptTask(this.name);
         await this.refresh();
     }
 }

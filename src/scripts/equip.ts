@@ -10,18 +10,15 @@ async function main() {
     const charactersServise = await CharacterService.create(characterNames, mapService);
     const planCrafter = new PlanCrafter(mapService);
     const planLauncher = new PlanLauncher();
+    const person = charactersServise.get('man2');
 
-    const person = charactersServise.get('man3');
-    const plan1 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan2 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan3 = await planCrafter.createSimpleCraftPlan(person, 'iron_boots', 'gearcrafting', false, 5);
-    // const plan4 = await planCrafter.createSimpleCraftPlan(person, 'iron_ring', 'jewelrycrafting', false, 5);
+    const plan = await planCrafter.createEquipPlan(person, ['iron_ring']);
 
-    await planLauncher.runPlan(person, plan1);
-    // await planLauncher.runPlan(person, plan2, false);
-    // await planLauncher.runPlan(person, plan3, false);
-    // await planLauncher.runPlan(person, plan4, false);
+    planLauncher.runPlan(person, plan);
 }
+
+console.log('launched');
+// main();
 
 if (cluster.isMaster) {
     cluster.fork();

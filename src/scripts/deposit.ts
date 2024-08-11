@@ -12,15 +12,9 @@ async function main() {
     const planLauncher = new PlanLauncher();
 
     const person = charactersServise.get('man3');
-    const plan1 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan2 = await planCrafter.createSimpleCraftPlan(person, 'life_ring', 'jewelrycrafting', false, 10);
-    // const plan3 = await planCrafter.createSimpleCraftPlan(person, 'iron_boots', 'gearcrafting', false, 5);
-    // const plan4 = await planCrafter.createSimpleCraftPlan(person, 'iron_ring', 'jewelrycrafting', false, 5);
+    const plan = await planCrafter.createDepositAllPlan();
 
-    await planLauncher.runPlan(person, plan1);
-    // await planLauncher.runPlan(person, plan2, false);
-    // await planLauncher.runPlan(person, plan3, false);
-    // await planLauncher.runPlan(person, plan4, false);
+    await planLauncher.runPlan(person, plan, true);
 }
 
 if (cluster.isMaster) {

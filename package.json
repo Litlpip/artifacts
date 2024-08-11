@@ -10,10 +10,14 @@
     "test3": "ts-node src/index3.ts",
     "start": "ts-node src/index.ts",
     "craft": " ts-node src/scripts/craft.ts",
-    "cooking": " ts-node src/scripts/cooking.ts",
+    "equip": " ts-node src/scripts/equip.ts",
+    "cooking": "ts-node src/scripts/cooking.ts",
+    "deposit": "ts-node src/scripts/deposit.ts",
     "depositAll": "ts-node src/scripts/depositAll.ts",
     "equipAll": "ts-node src/scripts/allEquip.ts",
-    "fightAll": "ts-node src/scripts/allFight.ts"
+    "fightAll": "ts-node src/scripts/allFight.ts",
+    "craftAll": "ts-node src/scripts/craftAll.ts",
+    "gatherAll": "ts-node src/scripts/gatherAll.ts"
   },
   "author": "",
   "license": "ISC",

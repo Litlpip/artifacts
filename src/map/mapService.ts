@@ -42,7 +42,7 @@ export class MapService {
     }
 
     public get(code: MapCode): ArtifactMap[] {
-        return this.cache.get(code);
+        return <ArtifactMap[]>this.cache.get(code);
     }
 }
 

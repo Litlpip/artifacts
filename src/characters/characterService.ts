@@ -19,15 +19,19 @@ export class CharacterService {
         return new CharacterService(charList);
     }
 
-    list(): Character[] {
+    list(charList?: CharacterName[]): Character[] {
         const list: Character[] = [];
-        for (const value of this.cache.values()) {
-            list.push(value);
+        if (charList) {
+            charList.forEach((name) => list.push(this.get(name)));
+        } else {
+            for (const value of this.cache.values()) {
+                list.push(value);
+            }
         }
         return list;
     }
 
     public get(name: CharacterName): Character {
-        return this.cache.get(name);
+        return <Character>this.cache.get(name);
     }
 }

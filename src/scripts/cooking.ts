@@ -3,6 +3,7 @@ import {CharacterService} from '../characters/characterService';
 import {characterNames} from '../consts';
 import {PlanCrafter} from '../plan/createPlan';
 import {PlanLauncher} from '../plan/launchPlan';
+import cluster from 'node:cluster';
 
 async function main() {
     const mapService = await MapService.create();
@@ -16,4 +17,15 @@ async function main() {
     await planLauncher.runPlan(person, plan, true);
 }
 
-main();
+if (cluster.isMaster) {
+    cluster.fork();
+
+    cluster.on('exit', function (worker, code, signal) {
+        console.log('worker %d died (%s). restarting...', worker.process.pid, signal || code);
+        cluster.fork();
+    });
+}
+
+if (cluster.isWorker) {
+    main();
+}

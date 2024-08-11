@@ -1,5 +1,5 @@
 const config = {
-    printWidth: 120,
+    printWidth: 80,
     tabWidth: 4,
     singleQuote: true,
     jsxSingleQuote: true,
