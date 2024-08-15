@@ -14,15 +14,4 @@ async function main() {
     planLauncher.runPlanForEachChar(charactersServise.list(), planCrafter.createDepositAllPlan, [], false);
 }
 
-if (cluster.isMaster) {
-    cluster.fork();
-
-    cluster.on('exit', function (worker, code, signal) {
-        console.log('worker %d died (%s). restarting...', worker.process.pid, signal || code);
-        cluster.fork();
-    });
-}
-
-if (cluster.isWorker) {
-    main();
-}
+main();

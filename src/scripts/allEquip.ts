@@ -11,7 +11,7 @@ async function main() {
     const planCrafter = new PlanCrafter(mapService);
     const planLauncher = new PlanLauncher();
 
-    planLauncher.runPlanForEachCharWithChar(charactersServise.list(), planCrafter.createEquipPlan, [['life_ring']]);
+    planLauncher.runPlanForEachCharWithChar(charactersServise.list(), planCrafter.createEquipPlan, [['iron_axe']]);
 }
 
 if (cluster.isMaster) {

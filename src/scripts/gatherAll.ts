@@ -7,16 +7,17 @@ import cluster from 'node:cluster';
 
 async function main() {
     const mapService = await MapService.create();
-    const charactersServise = await CharacterService.create(characterNames, mapService);
+    const charactersServise = await CharacterService.create(
+        characterNames,
+        mapService,
+    );
     const planCrafter = new PlanCrafter(mapService);
     const planLauncher = new PlanLauncher();
 
-    // const gather = () => planCrafter.createGatherPlan('spruce_tree');
-
     planLauncher.runPlanForEachChar(
-        charactersServise.list(['Litlpip', 'man2', 'man1', 'man4']),
+        charactersServise.list(['man1', 'Litlpip', 'man2', 'man3', 'man4']),
         planCrafter.createGatherPlan,
-        ['spruce_tree'],
+        ['coal_rocks'],
         true,
     );
 
@@ -28,7 +29,11 @@ if (cluster.isMaster) {
     cluster.fork();
 
     cluster.on('exit', function (worker, code, signal) {
-        console.log('worker %d died (%s). restarting...', worker.process.pid, signal || code);
+        console.log(
+            'worker %d died (%s). restarting...',
+            worker.process.pid,
+            signal || code,
+        );
         cluster.fork();
     });
 }

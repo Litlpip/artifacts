@@ -12,13 +12,11 @@ async function main() {
     const planCrafter = new PlanCrafter(mapService);
     const planLauncher = new PlanLauncher();
 
-    const fight = (code: MapCode) => planCrafter.createFightPlan(code);
-
-    planLauncher.runPlanForEachChar(charactersServise.list(['man1', 'man2', 'man4']), () => fight('pig'), true);
+    planLauncher.runPlanForEachChar(charactersServise.list(), planCrafter.createFightPlan, ['skeleton'], true);
 
     // planLauncher.runPlanForEachChar(charactersServise.list(['man3']), () => fight('green_slime'), true);
 
-    planLauncher.runPlanForEachChar(charactersServise.list(['Litlpip']), () => fight('cow'), [], true);
+    // planLauncher.runPlanForEachChar(charactersServise.list(['Litlpip']), () => fight('cow'), [], true);
 }
 
 if (cluster.isMaster) {
